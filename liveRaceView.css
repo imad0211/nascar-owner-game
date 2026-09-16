@@ -1,0 +1,44 @@
+import { getTrackMap, interpolateTrackPosition } from "./trackMapData.js";
+export function renderLiveRaceView(session, root) {
+  if (!root) return;
+  const track = getTrackMap(session.trackId);
+  if (!track) { root.innerHTML = `<div class="race-error">Track map unavailable.</div>`; return; }
+  root.innerHTML = `
+    <section class="live-race">
+      <div class="race-topbar">
+        <strong>${escapeHtml(track.name)}</strong>
+        <span>Lap ${session.lap}/${session.totalLaps} • Stage ${session.stage}</span>
+        <b>${session.caution ? "CAUTION" : session.status.toUpperCase()}</b>
+      </div>
+      <div class="race-map-container">${renderTrack(session, track)}</div>
+      <div class="race-bottom">
+        <div class="running-order">
+          <h3>Running Order</h3>
+          ${session.entries.slice(0,20).map(e => `
+            <div class="running-row">
+              <strong>${e.position}</strong><span>#${escapeHtml(e.carNumber)}</span><span>${escapeHtml(e.status)}</span><span>${escapeHtml(e.pitStatus)}</span>
+            </div>`).join("")}
+        </div>
+        <div class="race-feed">
+          <h3>Race Feed</h3>
+          ${session.events.slice(0,12).map(e => `
+            <div class="race-event"><strong>Lap ${e.lap} — ${escapeHtml(e.headline)}</strong><span>${escapeHtml(e.detail)}</span></div>`).join("") || "<p>No events yet.</p>"}
+        </div>
+      </div>
+    </section>`;
+}
+export function renderTrack(session, track) {
+  const points = track.path.map(([x,y]) => `${x*1000},${y*600}`).join(" ");
+  const cars = session.entries.map(e => {
+    const p = interpolateTrackPosition(track, e.progress || 0);
+    return `<g class="race-car ${e.status === "DNF" ? "dnf" : ""}" transform="translate(${p.x*1000},${p.y*600})">
+      <circle r="10"></circle><text x="14" y="5">#${escapeHtml(e.carNumber)}</text>
+    </g>`;
+  }).join("");
+  return `<svg viewBox="0 0 1000 600" class="track-svg">
+    <polyline points="${points}" class="track-outline"></polyline>
+    <polyline points="${points}" class="track-centerline"></polyline>
+    ${cars}
+  </svg>`;
+}
+function escapeHtml(value) { return String(value ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }

@@ -1,2 +1,3 @@
-# nascar-owner-game
-NASCAR Owner Game web app
+# NASCAR Owner Game
+
+A small browser-based NASCAR team management game.
